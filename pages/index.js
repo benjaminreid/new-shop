@@ -1,203 +1,94 @@
-import Head from 'next/head'
+import React from "react";
+import Head from "next/head";
+import { loadStripe } from "@stripe/stripe-js";
 
-const Home = () => (
-  <div className="container">
-    <Head>
-      <title>Create Next App</title>
-      <link rel="icon" href="/favicon.ico" />
-    </Head>
+const Home = ({ skus }) => {
+  const stripe = React.useRef(null);
+  const [basket, setBasket] = React.useState({});
+  const items = Object.values(basket);
+  const basketCount = items.reduce((current, previous) => {
+    return current + previous.quantity;
+  }, 0);
 
-    <main>
-      <h1 className="title">
-        Welcome to <a href="https://nextjs.org">Next.js!</a>
-      </h1>
-
-      <p className="description">
-        Get started by editing <code>pages/index.js</code>
-      </p>
-
-      <div className="grid">
-        <a href="https://nextjs.org/docs" className="card">
-          <h3>Documentation &rarr;</h3>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a href="https://nextjs.org/learn" className="card">
-          <h3>Learn &rarr;</h3>
-          <p>Learn about Next.js in an interactive course with quizzes!</p>
-        </a>
-
-        <a
-          href="https://github.com/zeit/next.js/tree/master/examples"
-          className="card"
-        >
-          <h3>Examples &rarr;</h3>
-          <p>Discover and deploy boilerplate example Next.js projects.</p>
-        </a>
-
-        <a
-          href="https://zeit.co/import?filter=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          className="card"
-        >
-          <h3>Deploy &rarr;</h3>
-          <p>
-            Instantly deploy your Next.js site to a public URL with ZEIT Now.
-          </p>
-        </a>
-      </div>
-    </main>
-
-    <footer>
-      <a
-        href="https://zeit.co?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Powered by <img src="/zeit.svg" alt="ZEIT Logo" />
-      </a>
-    </footer>
-
-    <style jsx>{`
-      .container {
-        min-height: 100vh;
-        padding: 0 0.5rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
+  async function checkout() {
+    if (stripe.current) {
+      try {
+        await stripe.current.redirectToCheckout({
+          items,
+          successUrl: "http://localhost:3000/success",
+          cancelUrl: "http://localhost:3000/"
+        });
+      } catch (error) {
+        alert(error);
       }
+    }
+  }
 
-      main {
-        padding: 5rem 0;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-      }
-
-      footer {
-        width: 100%;
-        height: 100px;
-        border-top: 1px solid #eaeaea;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-
-      footer img {
-        margin-left: 0.5rem;
-      }
-
-      footer a {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-
-      a {
-        color: inherit;
-        text-decoration: none;
-      }
-
-      .title a {
-        color: #0070f3;
-        text-decoration: none;
-      }
-
-      .title a:hover,
-      .title a:focus,
-      .title a:active {
-        text-decoration: underline;
-      }
-
-      .title {
-        margin: 0;
-        line-height: 1.15;
-        font-size: 4rem;
-      }
-
-      .title,
-      .description {
-        text-align: center;
-      }
-
-      .description {
-        line-height: 1.5;
-        font-size: 1.5rem;
-      }
-
-      code {
-        background: #fafafa;
-        border-radius: 5px;
-        padding: 0.75rem;
-        font-size: 1.1rem;
-        font-family: Menlo, Monaco, Lucida Console, Liberation Mono,
-          DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New, monospace;
-      }
-
-      .grid {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-wrap: wrap;
-
-        max-width: 800px;
-        margin-top: 3rem;
-      }
-
-      .card {
-        margin: 1rem;
-        flex-basis: 45%;
-        padding: 1.5rem;
-        text-align: left;
-        color: inherit;
-        text-decoration: none;
-        border: 1px solid #eaeaea;
-        border-radius: 10px;
-        transition: color 0.15s ease, border-color 0.15s ease;
-      }
-
-      .card:hover,
-      .card:focus,
-      .card:active {
-        color: #0070f3;
-        border-color: #0070f3;
-      }
-
-      .card h3 {
-        margin: 0 0 1rem 0;
-        font-size: 1.5rem;
-      }
-
-      .card p {
-        margin: 0;
-        font-size: 1.25rem;
-        line-height: 1.5;
-      }
-
-      @media (max-width: 600px) {
-        .grid {
-          width: 100%;
-          flex-direction: column;
+  function addToBasket(sku) {
+    return () => {
+      setBasket({
+        ...basket,
+        [sku.id]: {
+          sku: sku.id,
+          quantity: basket[sku.id] ? basket[sku.id].quantity + 1 : 1
         }
-      }
-    `}</style>
+      });
+    };
+  }
 
-    <style jsx global>{`
-      html,
-      body {
-        padding: 0;
-        margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
-          Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
-      }
+  React.useEffect(() => {
+    async function load() {
+      stripe.current = await loadStripe("pk_test_0LgaoTtxkfBoQqTFB3rvGlvO");
+    }
 
-      * {
-        box-sizing: border-box;
-      }
-    `}</style>
-  </div>
-)
+    load();
+  });
 
-export default Home
+  return (
+    <div>
+      <Head>
+        <title>One Click Shop Demo</title>
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
+
+      <div style={{ position: "fixed", top: 0, right: 0 }}>
+        Basket ({basketCount})
+        <button onClick={checkout} disabled={basketCount === 0}>
+          Checkout
+        </button>
+      </div>
+
+      <ul>
+        {skus.map(sku => (
+          <li key={sku.id}>
+            <p>{sku.attributes.name}</p>
+            <div>
+              <img src={sku.image} width="100" />
+            </div>
+            <button onClick={addToBasket(sku)}>Add to Basket</button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
+function getSkus() {
+  return new Promise(resolve => {
+    const stripe = require("stripe")("sk_test_5OLgl3WAkUxwrUB6O6U1F6m0");
+
+    stripe.skus.list({ limit: 3 }, function(err, skus) {
+      resolve(skus);
+    });
+  });
+}
+
+export async function getStaticProps() {
+  const skus = await getSkus();
+
+  return {
+    props: { skus: skus.data }
+  };
+}
+
+export default Home;
