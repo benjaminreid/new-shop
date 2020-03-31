@@ -1,6 +1,9 @@
 import React from "react";
 import Head from "next/head";
+import getConfig from "next/config";
 import { loadStripe } from "@stripe/stripe-js";
+
+const { serverRuntimeConfig, publicRuntimeConfig } = getConfig();
 
 const Home = ({ skus }) => {
   const stripe = React.useRef(null);
@@ -15,8 +18,8 @@ const Home = ({ skus }) => {
       try {
         await stripe.current.redirectToCheckout({
           items,
-          successUrl: "http://localhost:3000/success",
-          cancelUrl: "http://localhost:3000/"
+          successUrl: `${window.location.origin}/success`,
+          cancelUrl: `${window.location.origin}`
         });
       } catch (error) {
         alert(error);
@@ -38,7 +41,7 @@ const Home = ({ skus }) => {
 
   React.useEffect(() => {
     async function load() {
-      stripe.current = await loadStripe("pk_test_0LgaoTtxkfBoQqTFB3rvGlvO");
+      stripe.current = await loadStripe(publicRuntimeConfig.STRIPE_PUBLIC);
     }
 
     load();
@@ -75,9 +78,9 @@ const Home = ({ skus }) => {
 
 function getSkus() {
   return new Promise(resolve => {
-    const stripe = require("stripe")("sk_test_5OLgl3WAkUxwrUB6O6U1F6m0");
+    const stripe = require("stripe")(serverRuntimeConfig.STRIPE_SECRET);
 
-    stripe.skus.list({ limit: 3 }, function(err, skus) {
+    stripe.skus.list({ limit: 20 }, function(err, skus) {
       resolve(skus);
     });
   });
