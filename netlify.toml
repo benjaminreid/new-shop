@@ -1,0 +1,7 @@
+[build]
+  publish = "out/"
+  command = "next build && next export"
+
+[template.environment]
+  STRIPE_SECRET = "Your Stripe secret key"
+  STRIPE_PUBLIC = "Your Stripe public key"
